@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Referral System – Frontend</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="app">
+    <header>
+      <h1>Referral System</h1>
+      <p>Minimal frontend to exercise the referral + fee engine API.</p>
+    </header>
+
+    <section class="config">
+      <h2>Backend Config</h2>
+      <label>
+        API Base URL
+        <input
+          id="api-base-url-input"
+          type="text"
+          value="http://localhost:8000"
+          autocomplete="off"
+        />
+      </label>
+      <button id="api-base-url-button" type="button">Use this URL</button>
+      <span id="api-base-url-display" class="status"></span>
+    </section>
+
+    <main>
+      <section class="panel">
+        <h2>Generate Referral Code</h2>
+        <form id="form-generate-referral">
+          <label>
+            User ID
+            <input type="number" id="generate-user-id" required />
+          </label>
+          <button type="button" id="generate-button">Generate / Get Code</button>
+        </form>
+      </section>
+
+      <section class="panel">
+        <h2>Register Referral</h2>
+        <form id="form-register-referral">
+          <label>
+            Child User ID
+            <input type="number" id="register-child-id" required />
+          </label>
+          <label>
+            Referral Code (e.g. REF_A)
+            <input type="text" id="register-referral-code" required />
+          </label>
+          <button type="button" id="register-button">Register Referral</button>
+        </form>
+      </section>
+
+      <section class="panel">
+        <h2>Submit Trade</h2>
+        <form id="form-submit-trade">
+          <label>
+            Trade ID
+            <input type="text" id="trade-id" placeholder="T123" required />
+          </label>
+          <label>
+            Trader User ID
+            <input type="number" id="trade-trader-id" required />
+          </label>
+          <label>
+            Chain
+            <input type="text" id="trade-chain" value="arbitrum" required />
+          </label>
+          <label>
+            Fee Token
+            <input type="text" id="trade-fee-token" value="USDC" required />
+          </label>
+          <label>
+            Fee Amount
+            <input type="text" id="trade-fee-amount" value="200.000000" required />
+          </label>
+          <label>
+            Executed At (ISO 8601, optional)
+            <input
+              type="text"
+              id="trade-executed-at"
+              placeholder="2025-01-01T12:00:00"
+            />
+          </label>
+          <button type="button" id="trade-button">Submit Trade</button>
+        </form>
+      </section>
+
+      <section class="panel">
+        <h2>View Referral Network</h2>
+        <form id="form-network">
+          <label>
+            Root User ID
+            <input type="number" id="network-root-id" required />
+          </label>
+          <label>
+            Max Levels
+            <input type="number" id="network-max-levels" value="3" min="1" max="5" />
+          </label>
+          <button type="button" id="network-button">Fetch Network</button>
+        </form>
+      </section>
+
+      <section class="panel">
+        <h2>View Earnings</h2>
+        <form id="form-earnings">
+          <label>
+            User ID
+            <input type="number" id="earnings-user-id" required />
+          </label>
+          <label class="inline">
+            Include Breakdown
+            <input type="checkbox" id="earnings-include-breakdown" />
+          </label>
+          <label>
+            From (optional, ISO)
+            <input type="text" id="earnings-from" placeholder="2025-01-01T00:00:00" />
+          </label>
+          <label>
+            To (optional, ISO)
+            <input type="text" id="earnings-to" placeholder="2025-01-31T00:00:00" />
+          </label>
+          <button type="button" id="earnings-button">Fetch Earnings</button>
+        </form>
+      </section>
+
+      <section class="panel">
+        <h2>Claim Preview (UI-only)</h2>
+        <form id="form-claim">
+          <label>
+            User ID
+            <input type="number" id="claim-user-id" required />
+          </label>
+          <label>
+            Token
+            <input type="text" id="claim-token" value="USDC" required />
+          </label>
+          <button type="button" id="claim-button">Check Claimable</button>
+        </form>
+      </section>
+    </main>
+
+    <section class="output">
+      <h2>Response</h2>
+      <pre id="response-output">{ } </pre>
+    </section>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
+

@@ -179,6 +179,28 @@ Content-Type: application/json
 
 ---
 
+## **NEW ADDITION: TESTING VIA FRONTEND**
+
+along with the backend api running, navigate to the fronend directory and run spin up the frontend 
+```
+cd frontend
+python3 -m http.server 5500
+```
+
+now navigate to `http://localhost:5500/index.html` and Set the API base URL at the top of the page (default: http://localhost:8000) and use the forms to:
+
+- generate referral codes
+
+- register referrals
+
+- submit trades
+
+- view referral network
+
+- view earnings (with optional date range + breakdown)
+
+- validate claimable rewards (UI-only)
+
 ## **6. running the automated test suite**
 
 execute all unit + integration tests:
@@ -196,6 +218,7 @@ You will see tests covering:
 * end-to-end API flow
 
 ---
+
 
 ## **7. project structure**
 

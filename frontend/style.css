@@ -1,0 +1,150 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
+  background-color: #050816;
+  color: #e5e7eb;
+}
+
+.app {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 1.5rem;
+}
+
+header {
+  margin-bottom: 1.5rem;
+}
+
+header h1 {
+  margin: 0 0 0.25rem 0;
+  font-size: 1.7rem;
+}
+
+header p {
+  margin: 0;
+  color: #9ca3af;
+}
+
+.config {
+  background: #0b1120;
+  border-radius: 0.75rem;
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+  border: 1px solid #1f2937;
+}
+
+.config label {
+  display: block;
+  margin-bottom: 0.5rem;
+}
+
+.config input {
+  width: 100%;
+  padding: 0.4rem 0.5rem;
+  border-radius: 0.4rem;
+  border: 1px solid #374151;
+  background-color: #020617;
+  color: #e5e7eb;
+}
+
+button {
+  margin-top: 0.4rem;
+  padding: 0.45rem 0.8rem;
+  border-radius: 0.5rem;
+  border: none;
+  cursor: pointer;
+  background: #2563eb;
+  color: white;
+  font-size: 0.9rem;
+}
+
+button:hover {
+  background: #1d4ed8;
+}
+
+.status {
+  margin-left: 0.5rem;
+  font-size: 0.8rem;
+  color: #9ca3af;
+}
+
+main {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.panel {
+  background: #020617;
+  border-radius: 0.75rem;
+  padding: 1rem;
+  border: 1px solid #1f2937;
+}
+
+.panel h2 {
+  margin-top: 0;
+  font-size: 1.05rem;
+  margin-bottom: 0.5rem;
+}
+
+.panel form label {
+  display: block;
+  margin-bottom: 0.4rem;
+  font-size: 0.85rem;
+}
+
+.panel input[type="text"],
+.panel input[type="number"] {
+  width: 100%;
+  padding: 0.4rem 0.5rem;
+  border-radius: 0.4rem;
+  border: 1px solid #374151;
+  background-color: #020617;
+  color: #e5e7eb;
+  font-size: 0.85rem;
+}
+
+.panel label.inline {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.panel label.inline input[type="checkbox"] {
+  width: auto;
+}
+
+.output {
+  background: #020617;
+  border-radius: 0.75rem;
+  padding: 1rem;
+  border: 1px solid #1f2937;
+}
+
+.output h2 {
+  margin-top: 0;
+  font-size: 1.05rem;
+}
+
+#response-output {
+  max-height: 320px;
+  overflow: auto;
+  background: #020617;
+  padding: 0.75rem;
+  border-radius: 0.5rem;
+  border: 1px solid #111827;
+  font-family: "SF Mono", Menlo, Monaco, Consolas, "Liberation Mono",
+    "Courier New", monospace;
+  font-size: 0.8rem;
+  white-space: pre;
+}
+
