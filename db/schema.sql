@@ -66,3 +66,15 @@ CREATE TABLE claim_events (
 CREATE INDEX idx_claim_events_user ON claim_events(user_id);
 CREATE INDEX idx_claim_events_created_at ON claim_events(created_at);
 
+CREATE TABLE IF NOT EXISTS payout_batches (
+    id          SERIAL PRIMARY KEY,
+    user_id     INTEGER NOT NULL REFERENCES users(id),
+    token       TEXT    NOT NULL,
+    amount      NUMERIC(36, 6) NOT NULL,   -- total amount in this batch
+    status      TEXT    NOT NULL DEFAULT 'pending', 
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_payout_batches_user_token
+    ON payout_batches (user_id, token);
