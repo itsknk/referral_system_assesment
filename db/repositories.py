@@ -328,3 +328,95 @@ def get_network_levels(
         current_level_ids = [u["user_id"] for u in users]
 
     return levels
+
+
+CLAIMABLE_KINDS = [
+    "cashback",
+    "commission_l1",
+    "commission_l2",
+    "commission_l3",
+]
+
+
+def perform_claim(
+    conn: Connection,
+    user_id: int,
+    token: str,
+) -> Dict[str, Any]:
+    """
+    move all unclaimed balances for (user_id, token) into claimed_amount
+    for cashback + commission kinds, and create a payout_batches row.
+
+    This MUST be called inside a single transaction.
+    it uses SELECT ... FOR UPDATE to prevent double-spend under concurrency.
+    """
+    # 1) lock the ledger rows for this user+token so two claims can't race.
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT kind, accrued_amount, claimed_amount
+            FROM accrual_ledger
+            WHERE user_id = %s AND token = %s
+            FOR UPDATE
+            """,
+            (user_id, token),
+        )
+        rows = cur.fetchall()
+
+    if not rows:
+        raise ValueError(f"No ledger rows for user {user_id} in {token}.")
+
+    total_claimable = Decimal("0")
+    claimable_by_kind: Dict[str, Decimal] = {}
+
+    for kind, accrued, claimed in rows:
+        if kind not in CLAIMABLE_KINDS:
+            # skip treasury etc.
+            continue
+        unclaimed = accrued - claimed
+        if unclaimed <= 0:
+            continue
+        total_claimable += unclaimed
+        claimable_by_kind[kind] = claimable_by_kind.get(kind, Decimal("0")) + unclaimed
+
+    if total_claimable <= 0:
+        raise ValueError(f"No claimable amount for user {user_id} in {token}.")
+
+    # 2) move all unclaimed for these kinds into claimed_amount.
+    #    easiest invariant-preserving rule:
+    #    claimed_amount := accrued_amount  (for claimable kinds)
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            UPDATE accrual_ledger
+            SET claimed_amount = accrued_amount,
+                updated_at = NOW()
+            WHERE user_id = %s
+              AND token   = %s
+              AND kind    = ANY(%s)
+            """,
+            (user_id, token, CLAIMABLE_KINDS),
+        )
+
+    # 3) create payout batch row for the total.
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            INSERT INTO payout_batches (user_id, token, amount, status)
+            VALUES (%s, %s, %s, 'pending')
+            RETURNING id, status, created_at
+            """,
+            (user_id, token, total_claimable),
+        )
+        batch_id, status, created_at = cur.fetchone()
+
+    return {
+        "batch_id": batch_id,
+        "user_id": user_id,
+        "token": token,
+        "amount": total_claimable,
+        "status": status,
+        "per_kind": claimable_by_kind,
+        "created_at": created_at,
+    }
+    
