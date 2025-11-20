@@ -179,6 +179,22 @@ Content-Type: application/json
 
 ---
 
+### **5.8 execute a claim**
+
+real claim processing.
+
+```http
+POST api/referral/claim/execute
+Content-Type: application/json
+
+{
+  "user_id": 4,
+  "token": "USDC"
+}
+```
+
+---
+
 ## **NEW ADDITION: TESTING VIA FRONTEND**
 
 along with the backend api running, navigate to the fronend directory and run spin up the frontend 
@@ -258,7 +274,7 @@ you will see tests covering:
 
 ## **add-ons**
 
-### **1. real claim processing**
+### **1. real claim processing** [DONE]
 
 what “real claim processing” means in this system,
 
