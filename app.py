@@ -13,6 +13,7 @@ from db.repositories import (
     ensure_trade_row, 
     get_or_generate_referral_code,
     get_network_levels,
+    perform_claim
 )
 
 
@@ -48,6 +49,10 @@ class TradeWebhookRequest(BaseModel):
     executed_at: datetime
 
 class ReferralClaimRequest(BaseModel):
+    user_id: int = Field(..., description="User ID attempting to claim")
+    token: str = Field("USDC", description="Token to claim in (default: USDC)")
+
+class ReferralClaimExecuteRequest(BaseModel):
     user_id: int = Field(..., description="User ID attempting to claim")
     token: str = Field("USDC", description="Token to claim in (default: USDC)")
 
@@ -507,3 +512,36 @@ def referral_claim(payload: ReferralClaimRequest):
         "kinds": per_kind_str,
     }
 
+
+@app.post("/api/referral/claim/execute")
+def referral_claim_execute(payload: ReferralClaimExecuteRequest):
+    """
+    real claim processing.
+
+    - locks the user's accrual_ledger rows for the given token.
+    - moves all unclaimed cashback + commission amounts into claimed_amount.
+    - creates a payout_batches row marked 'pending'.
+
+    returns the batch and per-kind breakdown.
+    """
+    try:
+        with get_conn() as conn:
+            result = perform_claim(conn, payload.user_id, payload.token)
+            conn.commit()
+    except ValueError as e:
+        # business-rule failures: no ledger rows, nothing claimable, etc.
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception:
+        # unexpected errors
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+    # format decimals for JSON
+    amount = result["amount"]
+    per_kind = result["per_kind"]
+
+    result["amount"] = f"{amount:.6f}"
+    result["per_kind"] = {k: f"{v:.6f}" for k, v in per_kind.items()}
+    if "created_at" in result and result["created_at"] is not None:
+        result["created_at"] = result["created_at"].isoformat()
+
+    return result
