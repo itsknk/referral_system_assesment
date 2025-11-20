@@ -21,8 +21,8 @@ all splits are journaled, aggregated, and exposed via clean HTTP APIs.
 clone the repo:
 
 ```bash
-git clone https://github.com/<your-username>/nika-referral-engine.git
-cd nika-referral-engine
+git clone https://github.com/itsknk/referral_system_assesment.git
+cd referral_system_assesment
 ```
 
 create a virtual environment:
@@ -209,7 +209,7 @@ execute all unit + integration tests:
 python -m pytest -q
 ```
 
-You will see tests covering:
+you will see tests covering:
 
 * fee engine
 * referral engine
@@ -256,3 +256,22 @@ You will see tests covering:
 
 ---
 
+## **add-ons**
+
+### **1. real claim processing**
+
+what “real claim processing” means in this system,
+
+currently:
+
+* `accrual_entries` is our journal of every fee split.
+* `accrual_ledger` has `accrued_amount` and `claimed_amount` per `(user_id, kind, token)`.
+* `/api/referral/claim` just calculates “unclaimed = accrued − claimed” and returns it; it doesn’t mutate anything.
+
+instead “real claim processing” should do three things inside a single DB transaction:
+
+1. **lock the relevant ledger rows for a user+token** so two concurrent claims can’t both spend the same unclaimed balance.
+2. **move unclaimed into claimed** by updating `claimed_amount` for the applicable kinds.
+3. **record a payout batch** so an off-chain/on-chain payment system knows how much to actually send.
+
+can keep this simple: a single row per claim in `payout_batches`, representing “this user has requested N USDC out.” could later add a `payout_batch_items` table keyed to trades or ledger rows, but we don’t need that to get the core correctness.
