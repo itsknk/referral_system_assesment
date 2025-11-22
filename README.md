@@ -291,3 +291,26 @@ instead “real claim processing” should do three things inside a single DB tr
 3. **record a payout batch** so an off-chain/on-chain payment system knows how much to actually send.
 
 can keep this simple: a single row per claim in `payout_batches`, representing “this user has requested N USDC out.” could later add a `payout_batch_items` table keyed to trades or ledger rows, but we don’t need that to get the core correctness.
+
+
+### **2. user creation api** [DONE]
+
+create a new user (independent of referral flow).
+
+POST `/api/user/create`
+
+request:
+```json
+{
+  "username": "karl ove"
+}
+```
+
+response:
+```json
+"user_id": 18,
+"username": "karl ove",
+"referral_code": "REF_XYZ123"
+```
+
+so this endpoint, inserts the user into the `user` table, automatically generates a unique referral code and ensures future referrals properly attach.

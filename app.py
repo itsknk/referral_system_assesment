@@ -13,7 +13,8 @@ from db.repositories import (
     ensure_trade_row, 
     get_or_generate_referral_code,
     get_network_levels,
-    perform_claim
+    perform_claim,
+    create_user_db,
 )
 
 
@@ -56,6 +57,9 @@ class ReferralClaimExecuteRequest(BaseModel):
     user_id: int = Field(..., description="User ID attempting to claim")
     token: str = Field("USDC", description="Token to claim in (default: USDC)")
 
+class UserCreateRequest(BaseModel):
+    username: str = Field(..., description="Unique username for the new user")
+
 
 # ---------
 # helpers for earnings endpoint
@@ -77,6 +81,29 @@ def _zero_map() -> Dict[str, str]:
 # ---------
 # endpoints
 # ---------
+
+
+@app.post("/api/user/create")
+def user_create(payload: UserCreateRequest):
+    """
+    create a new user in Postgres + generate referral code atomically.
+
+    response:
+    {
+      "user_id": int,
+      "username": str,
+      "referral_code": str
+    }
+    """
+    try:
+        with get_conn() as conn:
+            result = create_user_db(conn, payload.username)
+            conn.commit()
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception:
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @app.post("/api/referral/register")

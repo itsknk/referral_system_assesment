@@ -4,6 +4,64 @@ import secrets
 import string
 
 from psycopg import Connection
+from psycopg.errors import UniqueViolation
+
+
+def _generate_unique_referral_code(conn: Connection) -> str:
+    """
+    generate a unique referral code (REF_XXXXXXXX).
+    uses DB uniqueness check to guarantee no collisions.
+    """
+    alphabet = string.ascii_uppercase + string.digits
+    while True:
+        candidate = "REF_" + "".join(secrets.choice(alphabet) for _ in range(8))
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT 1 FROM users WHERE referral_code = %s",
+                (candidate,),
+            )
+            if cur.fetchone() is None:
+                return candidate
+
+
+def create_user_db(conn: Connection, username: str) -> Dict[str, Any]:
+    """
+    create a new user with a freshly generated referral_code.
+    returns {user_id, username, referral_code}.
+
+    enforces:
+      - username unique
+      - referral_code unique + NOT NULL
+    """
+    username = username.strip()
+    if not username:
+        raise ValueError("username cannot be empty")
+
+    referral_code = _generate_unique_referral_code(conn)
+
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                INSERT INTO users (username, referral_code)
+                VALUES (%s, %s)
+                RETURNING id, username, referral_code
+                """,
+                (username, referral_code),
+            )
+            row = cur.fetchone()
+            if row is None:
+                raise ValueError("failed to create user")
+            user_id, username_out, code_out = row
+        return {
+            "user_id": user_id,
+            "username": username_out,
+            "referral_code": code_out,
+        }
+
+    except UniqueViolation:
+        # username collision (or extremely unlikely referral_code collision)
+        raise ValueError(f"username '{username}' already exists")
 
 
 def get_user_referrer_id(conn: Connection, user_id: int) -> Optional[int]:
