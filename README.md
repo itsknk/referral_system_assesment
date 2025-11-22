@@ -217,6 +217,10 @@ now navigate to `http://localhost:5500/index.html` and Set the API base URL at t
 
 - validate claimable rewards (UI-only)
 
+- create a new user (addon)
+
+- execute a claim (addon)
+
 ## **6. running the automated test suite**
 
 execute all unit + integration tests:

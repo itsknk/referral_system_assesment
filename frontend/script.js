@@ -1,68 +1,20 @@
-// ---------- Config ----------
-
-// default API base; overridden when user hits "Use this URL"
-let apiBaseUrl = "http://localhost:8000";
-
-// helper to safely read base URL input
-function getApiBaseUrl() {
-  const input = document.getElementById("api-base-url-input");
-  const value = input && input.value.trim();
-  return value || apiBaseUrl;
-}
-
-// generic API caller
-async function callApi(path, options = {}) {
-  const base = getApiBaseUrl().replace(/\/+$/, "");
-  const url = `${base}${path}`;
-
-  const merged = {
-    headers: {
-      "Content-Type": "application/json",
-      ...(options.headers || {}),
-    },
-    ...options,
-  };
-
-  try {
-    const res = await fetch(url, merged);
-    let body = null;
-    try {
-      body = await res.json();
-    } catch {
-      // ignore JSON errors for empty bodies
-    }
-
-    if (!res.ok) {
-      const msg =
-        (body && body.detail) ||
-        `Request failed: ${res.status} ${res.statusText}`;
-      throw new Error(msg);
-    }
-
-    return body;
-  } catch (err) {
-    console.error("API call failed", err);
-    throw err;
-  }
-}
-
-function setResult(id, value) {
-  const el = document.getElementById(id);
-  if (!el) return;
-  if (typeof value === "string") {
-    el.textContent = value;
-  } else {
-    el.textContent = JSON.stringify(value, null, 2);
-  }
-}
-
-// ---------- wire up once DOM is ready ----------
-
 document.addEventListener("DOMContentLoaded", () => {
-  // Backend config
-  const baseUrlInput = document.getElementById("api-base-url-input");
-  const useUrlBtn = document.getElementById("api-base-url-button");
-  const baseUrlDisplay = document.getElementById("api-base-url-display");
+
+  // backend base URL config
+
+  const baseUrlInput = document.getElementById("base-url-input");
+  const baseUrlDisplay = document.getElementById("base-url-display");
+  const useUrlBtn = document.getElementById("use-url-btn");
+
+  let apiBaseUrl = (baseUrlInput && baseUrlInput.value.trim()) || "http://localhost:8000";
+
+  function getApiBaseUrl() {
+    return apiBaseUrl.replace(/\/+$/, ""); // strip trailing slash
+  }
+
+  if (baseUrlDisplay) {
+    baseUrlDisplay.textContent = `Using: ${getApiBaseUrl()}`;
+  }
 
   if (useUrlBtn) {
     useUrlBtn.addEventListener("click", () => {
@@ -74,27 +26,58 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // ---------- generate referral code (POST /api/referral/generate) ----------
+  // helpers
+
+  function setResult(preId, data) {
+    const pre = document.getElementById(preId);
+    if (!pre) return;
+    pre.textContent = JSON.stringify(data, null, 2);
+  }
+
+  async function callApi(path, options = {}) {
+    const url = `${getApiBaseUrl()}${path}`;
+    const res = await fetch(url, {
+      headers: {
+        "Content-Type": "application/json",
+        ...(options.headers || {}),
+      },
+      ...options,
+    });
+
+    let payload;
+    try {
+      payload = await res.json();
+    } catch (_) {
+      payload = null;
+    }
+
+    if (!res.ok) {
+      const msg =
+        (payload && (payload.detail || payload.error || JSON.stringify(payload))) ||
+        `Request failed (${res.status})`;
+      throw new Error(msg);
+    }
+
+    return payload;
+  }
+
+  // generate referral code
+  // POST /api/referral/generate
 
   const genUserIdInput = document.getElementById("generate-user-id");
   const genButton = document.getElementById("generate-button");
 
   if (genButton) {
     genButton.addEventListener("click", async () => {
-      if (!genUserIdInput || !genUserIdInput.value.trim()) {
-        alert("Please enter a user ID");
-        return;
-      }
+      const raw = genUserIdInput && genUserIdInput.value.trim();
+      if (!raw) return alert("Please enter a user ID");
 
-      const userId = Number(genUserIdInput.value.trim());
-      if (Number.isNaN(userId)) {
-        alert("User ID must be a number");
-        return;
-      }
+      const userId = Number(raw);
+      if (Number.isNaN(userId)) return alert("User ID must be a number");
 
       try {
         const data = await callApi("/api/referral/generate", {
-          method: "POST", 
+          method: "POST",
           body: JSON.stringify({ user_id: userId }),
         });
         setResult("response-output", data);
@@ -104,7 +87,8 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // ---------- register referral (POST /api/referral/register) ----------
+  // register referral
+  // POST /api/referral/register
 
   const regChildIdInput = document.getElementById("register-child-id");
   const regCodeInput = document.getElementById("register-referral-code");
@@ -112,29 +96,21 @@ document.addEventListener("DOMContentLoaded", () => {
 
   if (regButton) {
     regButton.addEventListener("click", async () => {
-      if (!regChildIdInput || !regChildIdInput.value.trim()) {
-        alert("Please enter child user ID");
-        return;
-      }
-      if (!regCodeInput || !regCodeInput.value.trim()) {
-        alert("Please enter referral code");
-        return;
-      }
+      const rawChild = regChildIdInput && regChildIdInput.value.trim();
+      const rawCode = regCodeInput && regCodeInput.value.trim();
 
-      const childId = Number(regChildIdInput.value.trim());
-      const code = regCodeInput.value.trim();
+      if (!rawChild) return alert("Please enter child user ID");
+      if (!rawCode) return alert("Please enter referral code");
 
-      if (Number.isNaN(childId)) {
-        alert("Child user ID must be a number");
-        return;
-      }
+      const childId = Number(rawChild);
+      if (Number.isNaN(childId)) return alert("Child user ID must be a number");
 
       try {
         const data = await callApi("/api/referral/register", {
           method: "POST",
           body: JSON.stringify({
             child_user_id: childId,
-            referral_code: code,
+            referral_code: rawCode,
           }),
         });
         setResult("response-output", data);
@@ -144,7 +120,8 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // ---------- submit trade (POST /api/webhook/trade) ----------
+  // submit trade
+  // POST /api/webhook/trade
 
   const tradeIdInput = document.getElementById("trade-id");
   const traderIdInput = document.getElementById("trade-trader-id");
@@ -156,40 +133,37 @@ document.addEventListener("DOMContentLoaded", () => {
 
   if (tradeButton) {
     tradeButton.addEventListener("click", async () => {
-      if (!tradeIdInput || !tradeIdInput.value.trim()) {
-        alert("Please enter trade ID");
-        return;
-      }
-      if (!traderIdInput || !traderIdInput.value.trim()) {
-        alert("Please enter trader user ID");
-        return;
-      }
-      if (!feeAmountInput || !feeAmountInput.value.trim()) {
-        alert("Please enter fee amount");
-        return;
-      }
+      const tradeId = tradeIdInput && tradeIdInput.value.trim();
+      const traderRaw = traderIdInput && traderIdInput.value.trim();
+      const feeRaw = feeAmountInput && feeAmountInput.value.trim();
 
-      const traderId = Number(traderIdInput.value.trim());
-      if (Number.isNaN(traderId)) {
-        alert("Trader user ID must be a number");
-        return;
-      }
+      if (!tradeId) return alert("Please enter trade ID");
+      if (!traderRaw) return alert("Please enter trader user ID");
+      if (!feeRaw) return alert("Please enter fee amount");
 
-      const body = {
-        trade_id: tradeIdInput.value.trim(),
-        trader_id: traderId,
-        chain: (chainInput && chainInput.value.trim()) || "arbitrum",
-        fee_token: (feeTokenInput && feeTokenInput.value.trim()) || "USDC",
-        fee_amount: feeAmountInput.value.trim(),
-        executed_at:
-          (executedAtInput && executedAtInput.value.trim()) ||
-          new Date().toISOString(),
-      };
+      const traderId = Number(traderRaw);
+      if (Number.isNaN(traderId)) return alert("Trader user ID must be a number");
+
+      const feeAmount = Number(feeRaw);
+      if (Number.isNaN(feeAmount)) return alert("Fee amount must be a number");
+
+      const chain = (chainInput && chainInput.value.trim()) || "arbitrum";
+      const feeToken = (feeTokenInput && feeTokenInput.value.trim()) || "USDC";
+      const executedAt =
+        (executedAtInput && executedAtInput.value.trim()) ||
+        new Date().toISOString();
 
       try {
         const data = await callApi("/api/webhook/trade", {
           method: "POST",
-          body: JSON.stringify(body),
+          body: JSON.stringify({
+            trade_id: tradeId,
+            trader_id: traderId,
+            chain,
+            fee_token: feeToken,
+            fee_amount: feeAmount.toFixed(6), // backend expects Decimal-like string
+            executed_at: executedAt,
+          }),
         });
         setResult("response-output", data);
       } catch (e) {
@@ -198,41 +172,29 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // ---------- view referral network (GET /api/referral/network) ----------
+  // view referral network
+  // GET /api/referral/network
 
-  const netRootIdInput = document.getElementById("network-root-id");
-  const netMaxLevelsInput = document.getElementById("network-max-levels");
-  const netLimitInput = document.getElementById("network-limit");
-  const netButton = document.getElementById("network-button");
+  const networkRootInput = document.getElementById("network-root-id");
+  const networkMaxLevelsInput = document.getElementById("network-max-levels");
+  const networkButton = document.getElementById("network-button");
 
-  if (netButton) {
-    netButton.addEventListener("click", async () => {
-      if (!netRootIdInput || !netRootIdInput.value.trim()) {
-        alert("Please enter root user ID");
-        return;
-      }
+  if (networkButton) {
+    networkButton.addEventListener("click", async () => {
+      const rootRaw = networkRootInput && networkRootInput.value.trim();
+      if (!rootRaw) return alert("Please enter root user ID");
 
-      const rootId = Number(netRootIdInput.value.trim());
-      if (Number.isNaN(rootId)) {
-        alert("Root user ID must be a number");
-        return;
-      }
+      const rootId = Number(rootRaw);
+      if (Number.isNaN(rootId)) return alert("Root user ID must be a number");
 
-      const maxLevels = Number(
-        (netMaxLevelsInput && netMaxLevelsInput.value.trim()) || "3"
-      );
-      const limit = Number(
-        (netLimitInput && netLimitInput.value.trim()) || "50"
-      );
-
-      const params = new URLSearchParams({
-        user_id: String(rootId),
-        max_levels: String(maxLevels),
-        limit_per_level: String(limit),
-      });
+      const maxLevels =
+        (networkMaxLevelsInput && Number(networkMaxLevelsInput.value)) || 3;
 
       try {
-        const data = await callApi(`/api/referral/network?${params.toString()}`);
+        const data = await callApi(
+          `/api/referral/network?root_user_id=${rootId}&max_levels=${maxLevels}`,
+          { method: "GET" }
+        );
         setResult("response-output", data);
       } catch (e) {
         alert(e.message || "Failed to fetch network");
@@ -240,53 +202,42 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // ---------- view earnings (GET /api/referral/earnings) ----------
+  // view earnings
+  // GET /api/referral/earnings
 
-  const earnUserIdInput = document.getElementById("earnings-user-id");
-  const earnIncludeBreakdownInput = document.getElementById(
+  const earningsUserIdInput = document.getElementById("earnings-user-id");
+  const earningsBreakdownInput = document.getElementById(
     "earnings-include-breakdown"
   );
-  const earnFromInput = document.getElementById("earnings-from");
-  const earnToInput = document.getElementById("earnings-to");
-  const earnLimitInput = document.getElementById("earnings-breakdown-limit");
-  const earnButton = document.getElementById("earnings-button");
+  const earningsFromInput = document.getElementById("earnings-from");
+  const earningsToInput = document.getElementById("earnings-to");
+  const earningsButton = document.getElementById("earnings-button");
 
-  if (earnButton) {
-    earnButton.addEventListener("click", async () => {
-      if (!earnUserIdInput || !earnUserIdInput.value.trim()) {
-        alert("Please enter user ID");
-        return;
-      }
+  if (earningsButton) {
+    earningsButton.addEventListener("click", async () => {
+      const userRaw = earningsUserIdInput && earningsUserIdInput.value.trim();
+      if (!userRaw) return alert("Please enter user ID");
 
-      const userId = Number(earnUserIdInput.value.trim());
-      if (Number.isNaN(userId)) {
-        alert("User ID must be a number");
-        return;
-      }
+      const userId = Number(userRaw);
+      if (Number.isNaN(userId)) return alert("User ID must be a number");
+
+      const includeBreakdown = !!(
+        earningsBreakdownInput && earningsBreakdownInput.checked
+      );
+      const fromVal = earningsFromInput && earningsFromInput.value.trim();
+      const toVal = earningsToInput && earningsToInput.value.trim();
 
       const params = new URLSearchParams({
-        user_id: String(userId),
+        user_id: userId,
+        include_breakdown: includeBreakdown ? "true" : "false",
       });
-
-      if (earnIncludeBreakdownInput && earnIncludeBreakdownInput.checked) {
-        params.set("include_breakdown", "true");
-        const lim = Number(
-          (earnLimitInput && earnLimitInput.value.trim()) || "50"
-        );
-        params.set("breakdown_limit", String(lim));
-      }
-
-      if (earnFromInput && earnFromInput.value.trim()) {
-        params.set("from", earnFromInput.value.trim());
-      }
-      if (earnToInput && earnToInput.value.trim()) {
-        params.set("to", earnToInput.value.trim());
-      }
+      if (fromVal) params.set("from", fromVal);
+      if (toVal) params.set("to", toVal);
 
       try {
-        const data = await callApi(
-          `/api/referral/earnings?${params.toString()}`
-        );
+        const data = await callApi(`/api/referral/earnings?${params.toString()}`, {
+          method: "GET",
+        });
         setResult("response-output", data);
       } catch (e) {
         alert(e.message || "Failed to fetch earnings");
@@ -294,7 +245,8 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // ---------- claim preview (UI only, POST /api/referral/claim) ----------
+  // claim preview (UI-only)
+  // POST /api/referral/claim
 
   const claimUserIdInput = document.getElementById("claim-user-id");
   const claimTokenInput = document.getElementById("claim-token");
@@ -302,33 +254,78 @@ document.addEventListener("DOMContentLoaded", () => {
 
   if (claimButton) {
     claimButton.addEventListener("click", async () => {
-      if (!claimUserIdInput || !claimUserIdInput.value.trim()) {
-        alert("Please enter user ID");
-        return;
-      }
+      const userRaw = claimUserIdInput && claimUserIdInput.value.trim();
+      if (!userRaw) return alert("Please enter user ID");
 
-      const userId = Number(claimUserIdInput.value.trim());
-      if (Number.isNaN(userId)) {
-        alert("User ID must be a number");
-        return;
-      }
+      const userId = Number(userRaw);
+      if (Number.isNaN(userId)) return alert("User ID must be a number");
 
-      const token =
-        (claimTokenInput && claimTokenInput.value.trim()) || "USDC";
+      const token = (claimTokenInput && claimTokenInput.value.trim()) || "USDC";
 
       try {
         const data = await callApi("/api/referral/claim", {
           method: "POST",
-          body: JSON.stringify({
-            user_id: userId,
-            token,
-          }),
+          body: JSON.stringify({ user_id: userId, token }),
         });
         setResult("response-output", data);
       } catch (e) {
-        alert(e.message || "No claimable amount or claim check failed");
+        alert(e.message || "Failed to preview claim");
+      }
+    });
+  }
+
+  // new addon #1: create user
+  // POST /api/user/create
+
+  const createUsernameInput = document.getElementById("create-username");
+  const createUserButton = document.getElementById("create-user-button");
+
+  if (createUserButton) {
+    createUserButton.addEventListener("click", async () => {
+      const username =
+        createUsernameInput && createUsernameInput.value.trim();
+      if (!username) return alert("Please enter a username");
+
+      try {
+        const data = await callApi("/api/user/create", {
+          method: "POST",
+          body: JSON.stringify({ username }),
+        });
+        setResult("response-output", data);
+      } catch (e) {
+        alert(e.message || "Failed to create user");
+      }
+    });
+  }
+
+  // new addon #2: execute claim (real processing)
+  // POST /api/referral/claim/execute
+
+  const claimExecUserIdInput = document.getElementById("claim-exec-user-id");
+  const claimExecTokenInput = document.getElementById("claim-exec-token");
+  const claimExecButton = document.getElementById("claim-exec-button");
+
+  if (claimExecButton) {
+    claimExecButton.addEventListener("click", async () => {
+      const userRaw =
+        claimExecUserIdInput && claimExecUserIdInput.value.trim();
+      if (!userRaw) return alert("Please enter user ID");
+
+      const userId = Number(userRaw);
+      if (Number.isNaN(userId)) return alert("User ID must be a number");
+
+      const token =
+        (claimExecTokenInput && claimExecTokenInput.value.trim()) || "USDC";
+
+      try {
+        const data = await callApi("/api/referral/claim/execute", {
+          method: "POST",
+          body: JSON.stringify({ user_id: userId, token }),
+        });
+        setResult("response-output", data);
+      } catch (e) {
+        alert(e.message || "Failed to execute claim");
       }
     });
   }
 });
-

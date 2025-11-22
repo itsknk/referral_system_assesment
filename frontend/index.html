@@ -29,6 +29,17 @@
 
     <main>
       <section class="panel">
+        <h2>Create User</h2>
+        <form id="form-create-user">
+          <label>
+            Username
+            <input type="text" id="create-username" placeholder="alice" required />
+          </label>
+          <button type="button" id="create-user-button">Create User</button>
+        </form>
+      </section>
+
+      <section class="panel">
         <h2>Generate Referral Code</h2>
         <form id="form-generate-referral">
           <label>
@@ -141,6 +152,21 @@
           <button type="button" id="claim-button">Check Claimable</button>
         </form>
       </section>
+
+      <section class="panel">
+        <h2>Execute Claim (Real)</h2>
+        <form id="form-claim-exec">
+          <label>
+            User ID
+            <input type="number" id="claim-exec-user-id" required />
+          </label>
+          <label>
+            Token
+            <input type="text" id="claim-exec-token" value="USDC" required />
+          </label>
+          <button type="button" id="claim-exec-button">Execute Claim</button>
+        </form>
+      </section>
     </main>
 
     <section class="output">
@@ -152,4 +178,3 @@
   <script src="script.js"></script>
 </body>
 </html>
-
